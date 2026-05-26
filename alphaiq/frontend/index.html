@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaIQ — AI Trading Academy</title>
+<style>
+:root {
+  --bg0:#060b14;--bg1:#0b1525;--bg2:#101e35;--bg3:#162540;
+  --border:#1c3050;--border2:#254070;
+  --text:#c0d5f0;--muted:#4a6890;--dim:#243050;
+  --green:#00e676;--gdim:#003820;
+  --red:#ff3355;--rdim:#3d0015;
+  --amber:#ffb300;--adim:#3d2a00;
+  --blue:#2979ff;--bdim:#0a1d50;
+  --purple:#d040fb;--pdim:#2a0050;
+  --cyan:#00e5ff;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','Courier New',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg0);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:var(--font)}
+input,textarea{font-family:var(--font)}
+
+/* ── Layout ── */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width 0.2s}
+.sidebar.collapsed{width:60px}
+.main-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topnav{height:56px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0}
+.page{flex:1;overflow-y:auto;padding:24px}
+
+/* ── Sidebar ── */
+.brand{padding:18px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#0055ff,#9900ff);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.brand-text{font-size:18px;font-weight:800;color:white;letter-spacing:-0.5px}
+.brand-text span{color:var(--blue)}
+.nav-items{flex:1;padding:8px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:0;cursor:pointer;transition:background 0.15s;border-left:3px solid transparent;font-size:13px;color:var(--muted);font-weight:500}
+.nav-item:hover{background:var(--bg2);color:var(--text)}
+.nav-item.active{background:var(--bdim);color:var(--blue);border-left-color:var(--blue)}
+.nav-icon{font-size:18px;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--red);color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border)}
+
+/* ── Topnav ── */
+.topnav-symbol{display:flex;align-items:center;gap:8px}
+.topnav-input{background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:7px 12px;width:110px;font-family:var(--mono);font-size:13px;text-transform:uppercase;outline:none}
+.topnav-input:focus{border-color:var(--blue)}
+.btn{padding:8px 16px;border-radius:8px;border:none;font-size:13px;font-weight:600;transition:all 0.15s}
+.btn-primary{background:var(--blue);color:white}
+.btn-primary:hover{background:#1a6aff}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg2);color:var(--text)}
+.btn-green{background:var(--gdim);color:var(--green);border:1px solid var(--green)}
+.btn-green:hover{background:var(--green);color:#000}
+.btn-red{background:var(--rdim);color:var(--red);border:1px solid var(--red)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.status-live{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--mono);margin-left:auto}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--red)}
+.live-dot.on{background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* ── Cards ── */
+.card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.card-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em}
+.card-body{padding:16px}
+
+/* ── Stats ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--bg1);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+.stat-value{font-size:22px;font-weight:700;color:white;font-family:var(--mono)}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* ── Chart ── */
+.chart-container{background:var(--bg0);border-radius:8px;position:relative;overflow:hidden}
+canvas{display:block}
+
+/* ── Signal ── */
+.signal-strip{display:flex;align-items:center;gap:16px;padding:14px 16px;background:var(--bg2);border-radius:10px;margin-bottom:16px}
+.sig-action{font-size:20px;font-weight:800;font-family:var(--mono);min-width:150px}
+.sig-action.STRONG\ BUY,.sig-action.BUY{color:var(--green)}
+.sig-action.STRONG\ SELL,.sig-action.SELL{color:var(--red)}
+.sig-action.WATCH{color:var(--amber)}
+.sig-action.HOLD,.sig-action.WAITING{color:var(--muted)}
+.sig-conf-wrap{flex:1}
+.sig-conf-label{font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px}
+.sig-conf-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.sig-conf-fill{height:100%;border-radius:3px;transition:width 0.5s}
+.sig-chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:5px}
+.chip-g{background:var(--gdim);color:var(--green);border:1px solid #004d20}
+.chip-r{background:var(--rdim);color:var(--red);border:1px solid #4d0015}
+.chip-b{background:var(--bdim);color:var(--blue);border:1px solid #0033aa}
+.chip-a{background:var(--adim);color:var(--amber);border:1px solid #4d3500}
+.chip-m{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.chip-p{background:var(--pdim);color:var(--purple);border:1px solid #5500aa}
+
+/* ── Reasons ── */
+.reasons{display:flex;flex-direction:column;gap:6px}
+.reason{padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.5;border-left:3px solid var(--border);background:var(--bg2)}
+.reason.bull{border-left-color:var(--green)}
+.reason.bear{border-left-color:var(--red)}
+.reason.info{border-left-color:var(--blue)}
+
+/* ── Tabs ── */
+.tabs{display:flex;gap:2px;background:var(--bg2);border-radius:8px;padding:3px;margin-bottom:16px}
+.tab-btn{flex:1;padding:7px 12px;border-radius:6px;border:none;background:transparent;color:var(--muted);font-size:12px;font-weight:600;transition:all 0.15s}
+.tab-btn.active{background:var(--bg1);color:white;box-shadow:0 1px 3px #00000040}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── Watchlist ── */
+.wl-item{display:flex;align-items:center;padding:10px 12px;border-radius:8px;cursor:pointer;gap:10px;transition:background 0.15s}
+.wl-item:hover,.wl-item.active{background:var(--bg2)}
+.wl-sym{font-family:var(--mono);font-weight:700;color:white;width:50px}
+.wl-price{font-family:var(--mono);font-size:12px;flex:1}
+.wl-chg{font-family:var(--mono);font-size:11px;width:60px;text-align:right}
+.wl-sig{font-size:10px;width:80px;text-align:right;font-family:var(--mono)}
+
+/* ── Whale Map ── */
+.whale-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.whale-cell{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;position:relative;overflow:hidden;transition:border-color 0.2s}
+.whale-cell.hot{border-color:var(--purple)}
+.whale-cell.hot::after{content:'🐳';position:absolute;top:6px;right:6px;font-size:11px}
+.wc-sym{font-family:var(--mono);font-size:14px;font-weight:700;color:white}
+.wc-vol{font-size:11px;color:var(--purple);font-family:var(--mono);margin-top:2px}
+.wc-bar{height:3px;background:var(--bg3);border-radius:2px;margin-top:8px;overflow:hidden}
+.wc-fill{height:100%;border-radius:2px;transition:width 0.5s}
+.wc-pres{font-size:10px;margin-top:4px;font-family:var(--mono)}
+
+/* ── Arena Leaderboard ── */
+.lb-table{width:100%;border-collapse:collapse}
+.lb-table th{font-size:11px;color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.06em}
+.lb-table td{padding:10px 12px;border-bottom:1px solid var(--bg2);font-size:13px}
+.lb-table tr:last-child td{border-bottom:none}
+.lb-rank{font-family:var(--mono);font-weight:700}
+.lb-rank.gold{color:#ffd700}
+.lb-rank.silver{color:#c0c0c0}
+.lb-rank.bronze{color:#cd7f32}
+.lb-avatar{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white}
+.lb-ret.pos{color:var(--green)}
+.lb-ret.neg{color:var(--red)}
+.you-row td{background:var(--bdim)}
+
+/* ── AI Mentor Chat ── */
+.chat-container{display:flex;flex-direction:column;height:calc(100vh - 160px)}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{max-width:80%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6}
+.chat-msg.user{background:var(--bdim);border:1px solid var(--blue);align-self:flex-end;border-bottom-right-radius:3px}
+.chat-msg.ai{background:var(--bg2);border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:3px}
+.chat-msg.ai .ai-label{font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em}
+.chat-input-row{padding:16px;border-top:1px solid var(--border);display:flex;gap:8px}
+.chat-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 14px;font-size:13px;outline:none;resize:none}
+.chat-input:focus{border-color:var(--blue)}
+
+/* ── Lessons ── */
+.lesson-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.lesson-card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:border-color 0.2s}
+.lesson-card:hover{border-color:var(--blue)}
+.lesson-level{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;margin-bottom:8px}
+.lesson-level.Beginner{color:var(--green)}
+.lesson-level.Intermediate{color:var(--amber)}
+.lesson-level.Advanced{color:var(--red)}
+.lesson-level.Essential{color:var(--purple)}
+.lesson-title{font-size:15px;font-weight:700;color:white;margin-bottom:8px}
+.lesson-topics{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.lesson-topic{font-size:10px;background:var(--bg3);color:var(--muted);padding:2px 8px;border-radius:4px}
+
+/* ── Auth ── */
+.auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg0)}
+.auth-card{background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:32px;width:380px}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-title{font-size:22px;font-weight:800;color:white;margin-bottom:6px;text-align:center}
+.auth-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:24px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:0.06em}
+.form-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 14px;font-size:13px;outline:none}
+.form-input:focus{border-color:var(--blue)}
+.form-btn{width:100%;padding:12px;border-radius:8px;border:none;background:var(--blue);color:white;font-size:14px;font-weight:700;cursor:pointer;transition:background 0.15s;margin-top:8px}
+.form-btn:hover{background:#1a6aff}
+.auth-switch{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
+.auth-switch a{color:var(--blue);cursor:pointer}
+.form-error{background:var(--rdim);border:1px solid var(--red);border-radius:6px;padding:8px 12px;font-size:12px;color:var(--red);margin-bottom:12px}
+
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;display:flex;align-items:center;justify-content:center}
+.modal-box{background:var(--bg1);border:1px solid var(--border2);border-radius:14px;padding:24px;width:360px;max-width:90vw}
+.modal-title{font-size:16px;font-weight:700;color:white;margin-bottom:16px}
+.modal-body{background:var(--bg2);border-radius:8px;padding:14px;font-family:var(--mono);font-size:12px;line-height:2;margin-bottom:14px}
+.modal-actions{display:flex;gap:8px}
+
+/* ── Indicators table ── */
+.ind-table{width:100%;border-collapse:collapse}
+.ind-table tr{border-bottom:1px solid var(--bg2)}
+.ind-table td{padding:6px 4px;font-size:12px}
+.ind-name{color:var(--muted);font-family:var(--mono)}
+.ind-val{font-family:var(--mono);text-align:right;font-weight:600}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:12px 20px;font-size:13px;z-index:200;animation:slideIn 0.3s ease;max-width:320px}
+@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ── Responsive ── */
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}.sidebar{display:none}}
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// AlphaIQ — Full SPA without React (vanilla JS for single-file simplicity)
+// Replace with Vite+React for production
+// ─────────────────────────────────────────────────────────────────────────────
+
+const API = 'http://127.0.0.1:8765';
+const WS_URL = 'ws://127.0.0.1:8765/ws/signals';
+
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  page: 'dashboard',
+  user: JSON.parse(localStorage.getItem('alphaiq_user') || 'null'),
+  token: localStorage.getItem('alphaiq_token') || '',
+  symbol: 'AAPL',
+  connected: false,
+  signal: null,
+  bars: [],
+  watchlist: ['AAPL','TSLA','NVDA','AMD','SPY'],
+  wlData: {},
+  whale: null,
+  whaleFlow: [],
+  competition: null,
+  leaderboard: [],
+  portfolio: { cash: 100000, positions: {}, trades: [], start_cash: 100000 },
+  chatMessages: [],
+  isLoading: false,
+  pendingTrade: null,
+  canvas: null,
+  ctx: null,
+};
+
+// ── Render engine ──────────────────────────────────────────────────────────
+function render() {
+  const root = document.getElementById('root');
+  if (!state.user) {
+    root.innerHTML = renderAuth();
+    bindAuth();
+    return;
+  }
+  root.innerHTML = `
+    <div class="app">
+      ${renderSidebar()}
+      <div class="main-content">
+        ${renderTopnav()}
+        <div class="page" id="mainPage">
+          ${renderPage()}
+        </div>
+      </div>
+    </div>
+    ${state.pendingTrade ? renderModal() : ''}
+    <div id="toast-container"></div>
+  `;
+  bindEvents();
+  afterRender();
+}
+
+// ── Auth ───────────────────────────────────────────────────────────────────
+function renderAuth() {
+  return `
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div style="width:50px;height:50px;background:linear-gradient(135deg,#0055ff,#9900ff);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:12px">⚡</div>
+        <div style="font-size:24px;font-weight:800;color:white">Alpha<span style="color:#2979ff">IQ</span></div>
+      </div>
+      <div class="auth-title" id="authTitle">Welcome back</div>
+      <div class="auth-sub" id="authSub">Sign in to your trading academy</div>
+      <div id="authError" style="display:none" class="form-error"></div>
+      <div id="authForm">
+        <div id="usernameField" style="display:none" class="form-group">
+          <label class="form-label">Username</label>
+          <input class="form-input" id="authUsername" placeholder="Choose a username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" id="authEmail" type="email" placeholder="you@example.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input class="form-input" id="authPassword" type="password" placeholder="••••••••">
+        </div>
+        <button class="form-btn" id="authSubmit">Sign In</button>
+      </div>
+      <div class="auth-switch">
+        <span id="authSwitchText">Don't have an account?</span>
+        <a id="authSwitchLink"> Sign up free</a>
+      </div>
+      <div style="margin-top:20px;padding:12px;background:var(--bg2);border-radius:8px;font-size:12px;color:var(--muted);text-align:center">
+        🚀 Start with paper trading — no real money needed<br>
+        <span style="color:var(--amber)">⚠️ Not financial advice. Practice first.</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+let authMode = 'login';
+function bindAuth() {
+  let mode = 'login';
+  document.getElementById('authSwitchLink').onclick = () => {
+    mode = mode === 'login' ? 'register' : 'login';
+    document.getElementById('authTitle').textContent = mode === 'login' ? 'Welcome back' : 'Create account';
+    document.getElementById('authSub').textContent = mode === 'login' ? 'Sign in to your trading academy' : 'Join the AlphaIQ community';
+    document.getElementById('authSubmit').textContent = mode === 'login' ? 'Sign In' : 'Create Account';
+    document.getElementById('usernameField').style.display = mode === 'register' ? 'block' : 'none';
+    document.getElementById('authSwitchText').textContent = mode === 'login' ? "Don't have an account?" : 'Already have an account?';
+    document.getElementById('authSwitchLink').textContent = mode === 'login' ? ' Sign up free' : ' Sign in';
+  };
+
+  document.getElementById('authSubmit').onclick = async () => {
+    const email    = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+    const username = document.getElementById('authUsername')?.value.trim();
+    const errEl    = document.getElementById('authError');
+    errEl.style.display = 'none';
+
+    if (!email || !password) { showAuthError('Please fill all fields'); return; }
+
+    try {
+      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+      const body     = mode === 'login' ? { email, password } : { email, password, username: username || email.split('@')[0] };
+      const r        = await fetch(API + endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      const d        = await r.json();
+      if (!r.ok) { showAuthError(d.detail || 'Error'); return; }
+      state.token = d.token;
+      state.user  = d.user;
+      localStorage.setItem('alphaiq_token', d.token);
+      localStorage.setItem('alphaiq_user', JSON.stringify(d.user));
+      render();
+      connectWS();
+      loadDashboard();
+    } catch(e) {
+      // Demo mode if server is offline
+      state.user  = { id: 'demo', username: 'demo_trader', email, skill_rating: 1000, competitions_won: 0 };
+      state.token = 'demo';
+      localStorage.setItem('alphaiq_token', 'demo');
+      localStorage.setItem('alphaiq_user', JSON.stringify(state.user));
+      render();
+      connectWS();
+      loadDashboard();
+    }
+  };
+
+  document.getElementById('authPassword').onkeydown = e => { if (e.key === 'Enter') document.getElementById('authSubmit').click(); };
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const items = [
+    { id:'dashboard', icon:'📊', label:'Dashboard' },
+    { id:'chart',     icon:'📈', label:'Chart & Signals' },
+    { id:'whale',     icon:'🐳', label:'Whale Flow' },
+    { id:'arena',     icon:'🏆', label:'Arena' },
+    { id:'mentor',    icon:'🧠', label:'AI Mentor' },
+    { id:'learn',     icon:'📚', label:'Learn' },
+  ];
+  return `
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text">Alpha<span>IQ</span></div>
+    </div>
+    <div class="nav-items">
+      ${items.map(i => `
+        <div class="nav-item ${state.page === i.id ? 'active' : ''}" data-page="${i.id}">
+          <span class="nav-icon">${i.icon}</span>
+          <span>${i.label}</span>
+        </div>`).join('')}
+    </div>
+    <div class="sidebar-footer">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">Signed in as</div>
+      <div style="font-size:13px;font-weight:600;color:white">${state.user?.username || 'Trader'}</div>
+      <div style="font-size:11px;color:var(--amber);margin-top:2px">⭐ Rating: ${state.user?.skill_rating || 1000}</div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px;width:100%" id="logoutBtn">Sign Out</button>
+    </div>
+  </div>`;
+}
+
+// ── Topnav ─────────────────────────────────────────────────────────────────
+function renderTopnav() {
+  return `
+  <div class="topnav">
+    <div class="topnav-symbol">
+      <input class="topnav-input" id="symbolInput" value="${state.symbol}" placeholder="Symbol" maxlength="5">
+      <button class="btn btn-primary btn-sm" id="analyzeBtn">Analyze</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${['1m','5m','15m','1h'].map(tf => `<button class="btn btn-ghost btn-sm tf-btn" data-tf="${tf}">${tf}</button>`).join('')}
+    </div>
+    <div class="status-live">
+      <div class="live-dot ${state.connected ? 'on' : ''}"></div>
+      <span style="color:${state.connected ? 'var(--green)' : 'var(--red)'}">${state.connected ? 'LIVE' : 'OFFLINE'}</span>
+    </div>
+  </div>`;
+}
+
+// ── Pages ──────────────────────────────────────────────────────────────────
+function renderPage() {
+  switch(state.page) {
+    case 'dashboard': return renderDashboard();
+    case 'chart':     return renderChartPage();
+    case 'whale':     return renderWhalePage();
+    case 'arena':     return renderArenaPage();
+    case 'mentor':    return renderMentorPage();
+    case 'learn':     return renderLearnPage();
+    default:          return renderDashboard();
+  }
+}
+
+function renderDashboard() {
+  const sig = state.signal;
+  const portfolio = state.portfolio;
+  const pnl = portfolio.cash + Object.values(portfolio.positions||{}).reduce((s,p)=>s+p.qty*p.avg_cost,0) - portfolio.start_cash;
+  return `
+  <div style="max-width:1200px">
+    <div style="margin-bottom:20px">
+      <div style="font-size:22px;font-weight:800;color:white">Good ${getTimeOfDay()}, ${state.user?.username} 👋</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Market is ${getMarketStatus()} · ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Paper Portfolio</div>
+        <div class="stat-value">$${(portfolio.cash||100000).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+        <div class="stat-sub" style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}$${pnl.toFixed(0)} P&amp;L</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Current Signal</div>
+        <div class="stat-value" style="font-size:16px;color:${sig?.action?.includes('BUY')?'var(--green)':sig?.action?.includes('SELL')?'var(--red)':'var(--muted)'}">${sig?.action || 'WAITING…'}</div>
+        <div class="stat-sub">${state.symbol} · ${sig ? Math.round(sig.confidence*100)+'% confidence' : 'Analyze a symbol'}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Whale Alerts</div>
+        <div class="stat-value">${state.whaleFlow.filter(w=>w.whale?.is_whale).length}</div>
+        <div class="stat-sub">Active whale activity</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Skill Rating</div>
+        <div class="stat-value">${state.user?.skill_rating || 1000}</div>
+        <div class="stat-sub">ELO rating · Keep practicing!</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:16px">
+      <div>
+        ${renderSignalStrip()}
+        <div class="card">
+          <div class="card-header"><span class="card-title">Live Chart — ${state.symbol}</span></div>
+          <div class="chart-container" style="height:280px" id="chartWrap">
+            <canvas id="mainChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${renderWatchlistPanel()}
+        ${renderQuickMentorPanel()}
+      </div>
+    </div>
+
+    <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      ${renderWhalePreview()}
+      ${renderArenaPreview()}
+    </div>
+  </div>`;
+}
+
+function renderSignalStrip() {
+  const sig = state.signal;
+  if (!sig) return `<div class="signal-strip"><span class="sig-action WAITING">WAITING…</span><span style="font-size:12px;color:var(--muted)">Click Analyze to get AI signal</span></div>`;
+  const action = sig.action || 'HOLD';
+  const conf   = Math.round((sig.confidence||0)*100);
+  const fillColor = action.includes('BUY') ? 'var(--green)' : action.includes('SELL') ? 'var(--red)' : action==='WATCH' ? 'var(--amber)' : 'var(--dim)';
+  const inds = sig.indicators || {};
+  return `
+  <div class="signal-strip">
+    <span class="sig-action ${action}">${action}</span>
+    <div class="sig-conf-wrap">
+      <div class="sig-conf-label">AI Confidence</div>
+      <div class="sig-conf-bar"><div class="sig-conf-fill" style="width:${conf}%;background:${fillColor}"></div></div>
+    </div>
+    <div class="sig-chips">
+      <span class="chip ${inds.rsi<30?'chip-g':inds.rsi>70?'chip-r':'chip-m'}">RSI ${inds.rsi||'—'}</span>
+      <span class="chip ${inds.macd_trend==='bullish'?'chip-g':'chip-r'}">MACD ${inds.macd_trend||'—'}</span>
+      ${inds.vol_spike ? '<span class="chip chip-a">🔥 VOL SPIKE</span>' : ''}
+      <span class="chip chip-r">SL $${sig.stop_loss||'—'}</span>
+      <span class="chip chip-g">TP $${sig.take_profit||'—'}</span>
+      ${state.whale?.is_whale ? '<span class="chip chip-p">🐳 WHALE</span>' : ''}
+    </div>
+  </div>`;
+}
+
+function renderWatchlistPanel() {
+  return `
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Watchlist</span>
+      <input style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:4px 8px;width:80px;font-size:11px;text-transform:uppercase;outline:none" id="wlAddInput" placeholder="+ Symbol">
+    </div>
+    <div style="padding:4px">
+      ${state.watchlist.map(sym => {
+        const d   = state.wlData[sym] || {};
+        const sig = d.signal?.action || '—';
+        const pct = d.quote?.change_pct || 0;
+        return `
+        <div class="wl-item ${sym===state.symbol?'active':''}" data-sym="${sym}">
+          <span class="wl-sym">${sym}</span>
+          <span class="wl-price" style="font-family:var(--mono);font-size:12px">$${(d.quote?.price||0).toFixed(2)}</span>
+          <span class="wl-chg" style="color:${pct>=0?'var(--green)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(2)}%</span>
+          <span class="wl-sig" style="color:${sig.includes('BUY')?'var(--green)':sig.includes('SELL')?'var(--red)':'var(--muted)'};font-size:10px">${sig}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+
+function renderQuickMentorPanel() {
+  return `
+  <div class="card">
+    <div class="card-header"><span class="card-title">Ask AI Mentor</span></div>
+    <div class="card-body" style="padding:10px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        ${['What does RSI mean?','Explain MACD to me','How do I set a stop-loss?','What are whales?'].map(q =>
+          `<button class="btn btn-ghost btn-sm" style="text-align:left;font-size:11px" data-question="${q}">${q}</button>`
+        ).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderWhalePreview() {
+  const whales = state.whaleFlow.slice(0,6);
+  return `
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🐳 Whale Flow</span>
+      <button class="btn btn-ghost btn-sm" data-page="whale">View All</button>
+    </div>
+    <div class="card-body">
+      <div class="whale-grid" style="grid-template-columns:repeat(3,1fr)">
+        ${whales.length ? whales.map(w => {
+          const isW = w.whale?.is_whale;
+          const pct = Math.min((w.whale?.vol_ratio||1)/5*100, 100);
+          const col = isW ? '#d040fb' : (w.whale?.pressure==='BUY' ? 'var(--green)' : 'var(--red)');
+          return `
+          <div class="whale-cell ${isW?'hot':''}">
+            <div class="wc-sym">${w.symbol}</div>
+            <div class="wc-vol" style="color:${col}">${(w.whale?.vol_ratio||1).toFixed(1)}x</div>
+            <div class="wc-bar"><div class="wc-fill" style="width:${pct}%;background:${col}"></div></div>
+            <div class="wc-pres" style="color:${w.whale?.pressure==='BUY'?'var(--green)':'var(--red)'}">${w.whale?.pressure||'—'}</div>
+          </div>`;
+        }).join('') : '<div style="color:var(--muted);font-size:12px;padding:8px">Loading whale data…</div>'}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderArenaPreview() {
+  const lb = state.leaderboard.slice(0,5);
+  return `
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🏆 Arena Leaderboard</span>
+      <button class="btn btn-ghost btn-sm" data-page="arena">Join</button>
+    </div>
+    <div class="card-body" style="padding:0">
+      <table class="lb-table">
+        <tr><th>#</th><th>Trader</th><th>Return</th><th>Trades</th></tr>
+        ${lb.length ? lb.map((entry,i) => {
+          const rankCls = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+          const rankIco = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+          const ret = entry.total_return||0;
+          return `<tr>
+            <td><span class="lb-rank ${rankCls}">${rankIco}</span></td>
+            <td>${entry.username||'Trader'}</td>
+            <td class="lb-ret ${ret>=0?'pos':'neg'}">${ret>=0?'+':''}${ret.toFixed(1)}%</td>
+            <td style="color:var(--muted);font-family:var(--mono)">${Math.floor(Math.random()*100)}</td>
+          </tr>`;
+        }).join('') : `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px">No competitors yet — join the arena!</td></tr>`}
+      </table>
+    </div>
+  </div>`;
+}
+
+function renderChartPage() {
+  const sig = state.signal;
+  return `
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;max-width:1400px">
+    <div>
+      ${renderSignalStrip()}
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <span class="card-title">${state.symbol} — Candlestick Chart</span>
+          <span style="font-size:12px;color:var(--muted);font-family:var(--mono)">$${state.wlData[state.symbol]?.quote?.price?.toFixed(2)||'—'}</span>
+        </div>
+        <div class="chart-container" style="height:400px" id="chartWrap">
+          <canvas id="mainChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="card-header"><span class="card-title">AI Reasoning</span></div>
+        <div class="card-body">
+          ${sig?.reasons?.length ? `<div class="reasons">${sig.reasons.map(r => {
+            const bull = /🟢|bullish|oversold|above|Uptrend|Bullish|bounce/.test(r);
+            const bear = /🔴|bearish|overbought|below|Downtrend|Bearish/.test(r);
+            return `<div class="reason ${bull?'bull':bear?'bear':'info'}">${r}</div>`;
+          }).join('')}</div>` : '<div style="color:var(--muted);font-size:12px">Analyze a symbol to see AI reasoning</div>'}
+          ${sig ? `
+          <div style="margin-top:12px;padding:10px;background:var(--bg2);border-radius:8px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">TRADE LEVELS</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-family:var(--mono);font-size:11px">
+              <div><div style="color:var(--muted)">Entry</div><div style="color:white">$${sig.entry_price}</div></div>
+              <div><div style="color:var(--red)">Stop</div><div style="color:var(--red)">$${sig.stop_loss}</div></div>
+              <div><div style="color:var(--green)">Target</div><div style="color:var(--green)">$${sig.take_profit}</div></div>
+            </div>
+          </div>` : ''}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Indicators</span></div>
+        <div class="card-body" style="padding:8px">
+          ${sig?.indicators ? `
+          <table class="ind-table">
+            ${[
+              ['RSI (14)', sig.indicators.rsi, sig.indicators.rsi<30?'var(--green)':sig.indicators.rsi>70?'var(--red)':'var(--text)'],
+              ['MACD', sig.indicators.macd, sig.indicators.macd>0?'var(--green)':'var(--red)'],
+              ['EMA 9', sig.indicators.ema9, 'var(--amber)'],
+              ['EMA 21', sig.indicators.ema21, 'var(--blue)'],
+              ['EMA 50', sig.indicators.ema50, 'var(--purple)'],
+              ['VWAP', sig.indicators.vwap, 'var(--cyan)'],
+              ['BB Upper', sig.indicators.bb_upper, 'var(--muted)'],
+              ['BB Lower', sig.indicators.bb_lower, 'var(--muted)'],
+              ['Vol Ratio', (sig.indicators.vol_ratio||0)+'x', sig.indicators.vol_spike?'var(--amber)':'var(--text)'],
+              ['Pattern', sig.indicators.pattern, 'var(--purple)'],
+            ].map(([n,v,c]) => `<tr><td class="ind-name">${n}</td><td class="ind-val" style="color:${c}">${typeof v==='number'?v.toFixed(2):v||'—'}</td></tr>`).join('')}
+          </table>` : '<div style="color:var(--muted);font-size:12px">No data</div>'}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Paper Trade</span></div>
+        <div class="card-body">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <input type="number" id="tradeQty" value="1" min="1" style="width:70px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 8px;font-size:12px;outline:none">
+            <span style="font-size:12px;color:var(--muted)">shares</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-green" style="flex:1" id="paperBuyBtn">📈 BUY</button>
+            <button class="btn btn-red" style="flex:1" id="paperSellBtn">📉 SELL</button>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--muted)">Cash: $${(state.portfolio.cash||100000).toLocaleString()}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderWhalePage() {
+  return `
+  <div style="max-width:1200px">
+    <div style="margin-bottom:20px">
+      <div style="font-size:20px;font-weight:800;color:white;margin-bottom:6px">🐳 Whale Flow Map</div>
+      <div style="font-size:13px;color:var(--muted)">Real-time institutional money flow — see where big money is moving right now</div>
+    </div>
+    <div class="whale-grid" style="margin-bottom:20px">
+      ${state.whaleFlow.map(w => {
+        const isW = w.whale?.is_whale;
+        const ratio = w.whale?.vol_ratio || 1;
+        const pct   = Math.min(ratio/5*100, 100);
+        const col   = isW ? '#d040fb' : w.whale?.pressure==='BUY' ? 'var(--green)' : 'var(--red)';
+        return `
+        <div class="whale-cell ${isW?'hot':''}" style="cursor:pointer" data-sym="${w.symbol}">
+          <div class="wc-sym">${w.symbol}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">$${(w.price||0).toFixed(2)} <span style="color:${w.change_pct>=0?'var(--green)':'var(--red)'}">${w.change_pct>=0?'+':''}${(w.change_pct||0).toFixed(2)}%</span></div>
+          <div class="wc-vol" style="color:${col};margin-top:4px">${ratio.toFixed(1)}x avg volume</div>
+          <div class="wc-bar"><div class="wc-fill" style="width:${pct}%;background:${col}"></div></div>
+          <div class="wc-pres" style="color:${w.whale?.pressure==='BUY'?'var(--green)':'var(--red)'};margin-top:4px">${w.whale?.pressure||'—'} pressure</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;font-family:var(--mono)">$${fmtBig(w.whale?.dollar_volume||0)}</div>
+          ${isW?'<div style="font-size:10px;color:var(--purple);margin-top:4px">⚡ Unusual activity</div>':''}
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">Understanding Whale Activity</span></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;font-size:12px">
+          <div><div style="color:var(--purple);font-weight:600;margin-bottom:6px">🐳 What is a whale?</div><div style="color:var(--muted);line-height:1.7">Institutional investors — hedge funds, banks, mutual funds — that trade millions at once. Their moves can push prices significantly.</div></div>
+          <div><div style="color:var(--amber);font-weight:600;margin-bottom:6px">📊 What vol ratio means</div><div style="color:var(--muted);line-height:1.7">2x+ avg volume means unusual activity. 5x+ means major institutional movement. This is often a signal before a big price move.</div></div>
+          <div><div style="color:var(--green);font-weight:600;margin-bottom:6px">💡 How to use this</div><div style="color:var(--muted);line-height:1.7">Whale buying + AI bullish signal = stronger conviction. Whale selling + bearish signal = extra caution. Never trade on whale data alone.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderArenaPage() {
+  const lb   = state.leaderboard;
+  const comp = state.competition;
+  const port = state.portfolio;
+  const total = port.cash + Object.values(port.positions||{}).reduce((s,p)=>s+p.qty*p.avg_cost,0);
+  const ret   = ((total - port.start_cash) / port.start_cash * 100).toFixed(2);
+
+  return `
+  <div style="max-width:1100px">
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:16px">
+      <div>
+        <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,var(--bg1),#12083a);border-color:#3a1a7a">
+          <div class="card-body">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div style="font-size:13px;color:var(--muted);margin-bottom:4px">CURRENT COMPETITION</div>
+                <div style="font-size:20px;font-weight:800;color:white">${comp?.name || 'Weekly Arena'}</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:4px">$100,000 starting capital · Paper trading only</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:13px;color:var(--amber)">🏆 Top 3 win premium access</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:4px">Ends: ${comp?.end_date || 'Friday'}</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px">
+              ${[
+                ['Your Rank', '#—', 'var(--amber)'],
+                ['Return', ret+'%', parseFloat(ret)>=0?'var(--green)':'var(--red)'],
+                ['Cash', '$'+port.cash.toLocaleString('en-US',{maximumFractionDigits:0}), 'white'],
+                ['Trades', port.trades?.length||0, 'var(--cyan)'],
+              ].map(([l,v,c]) => `<div style="background:var(--bg2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${l}</div><div style="font-size:18px;font-weight:700;font-family:var(--mono);color:${c}">${v}</div></div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Leaderboard</span></div>
+          <table class="lb-table">
+            <tr><th>#</th><th>Trader</th><th>Return</th><th>Portfolio Value</th></tr>
+            ${lb.length ? lb.map((e,i) => {
+              const ico = i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+              const ret = e.total_return||0;
+              const isYou = e.user_id === state.user?.id;
+              return `<tr class="${isYou?'you-row':''}">
+                <td><span class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${ico}</span></td>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="lb-avatar" style="background:hsl(${(e.username||'').charCodeAt(0)*10},60%,40%)">${(e.username||'?')[0].toUpperCase()}</div>${e.username||'Trader'}${isYou?' <span style="font-size:10px;color:var(--blue)">(you)</span>':''}</div></td>
+                <td class="lb-ret ${ret>=0?'pos':'neg'}" style="font-family:var(--mono)">${ret>=0?'+':''}${ret.toFixed(2)}%</td>
+                <td style="font-family:var(--mono);color:var(--text)">$${(e.portfolio_value||100000).toLocaleString('en-US',{maximumFractionDigits:0})}</td>
+              </tr>`;
+            }).join('') : `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">No competitors yet — be the first!</td></tr>`}
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Quick Trade</span></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label" style="font-size:11px">Symbol</label>
+              <input class="form-input" id="arenaSymbol" value="${state.symbol}" placeholder="AAPL">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size:11px">Quantity</label>
+              <input class="form-input" id="arenaQty" type="number" value="10" min="1">
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Price: $${state.wlData[state.symbol]?.quote?.price?.toFixed(2)||'—'}</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-green" style="flex:1" id="arenaBuyBtn">BUY</button>
+              <button class="btn btn-red" style="flex:1" id="arenaSellBtn">SELL</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Open Positions</span></div>
+          <div class="card-body" style="padding:8px">
+            ${Object.entries(port.positions||{}).length ? Object.entries(port.positions).map(([sym,pos]) => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 4px;border-bottom:1px solid var(--bg2);font-size:12px">
+                <span style="font-family:var(--mono);font-weight:700;color:white">${sym}</span>
+                <span style="color:var(--muted)">${pos.qty}×$${pos.avg_cost.toFixed(2)}</span>
+              </div>`).join('') : '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px">No open positions</div>'}
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Recent Trades</span></div>
+          <div class="card-body" style="padding:8px">
+            ${port.trades?.slice(-5).reverse().map(t => `
+              <div style="display:flex;justify-content:space-between;padding:5px 4px;border-bottom:1px solid var(--bg2);font-size:11px;font-family:var(--mono)">
+                <span style="color:${t.side==='buy'?'var(--green)':'var(--red)'}">${t.side.toUpperCase()}</span>
+                <span>${t.symbol}</span>
+                <span>${t.qty}×$${t.price.toFixed(2)}</span>
+              </div>`).join('') || '<div style="color:var(--muted);font-size:12px;text-align:center;padding:12px">No trades yet</div>'}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderMentorPage() {
+  return `
+  <div style="max-width:900px">
+    <div style="margin-bottom:20px">
+      <div style="font-size:20px;font-weight:800;color:white;margin-bottom:6px">🧠 AI Trading Mentor</div>
+      <div style="font-size:13px;color:var(--muted)">Powered by Claude AI — ask anything about trading, signals, or market analysis</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 220px;gap:16px">
+      <div class="card" style="display:flex;flex-direction:column;height:calc(100vh - 200px)">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-msg ai">
+            <div class="ai-label">AlphaIQ Mentor</div>
+            Welcome! I'm your AI trading mentor. I can explain any indicator, help you understand signals, teach you about whale tracking, or walk you through risk management.
+
+            <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">
+              ${['What is RSI?','Explain MACD','How do I use stop-losses?','What are whales?'].map(q =>
+                `<button class="btn btn-ghost btn-sm" style="font-size:11px" data-question="${q}">${q}</button>`
+              ).join('')}
+            </div>
+          </div>
+          ${state.chatMessages.map(m => `
+            <div class="chat-msg ${m.role}">
+              ${m.role==='ai'?'<div class="ai-label">AlphaIQ Mentor</div>':''}
+              <div style="white-space:pre-wrap">${m.content}</div>
+            </div>`).join('')}
+        </div>
+        <div class="chat-input-row">
+          <textarea class="chat-input" id="chatInput" rows="2" placeholder="Ask me anything about trading…"></textarea>
+          <button class="btn btn-primary" id="chatSendBtn" style="align-self:flex-end">Send</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Current Context</span></div>
+          <div class="card-body" style="font-size:11px;font-family:var(--mono);line-height:2">
+            <div style="color:var(--muted)">Symbol</div><div style="color:white">${state.symbol}</div>
+            <div style="color:var(--muted)">Signal</div><div style="color:${state.signal?.action?.includes('BUY')?'var(--green)':state.signal?.action?.includes('SELL')?'var(--red)':'var(--muted)'}">${state.signal?.action||'—'}</div>
+            <div style="color:var(--muted)">RSI</div><div>${state.signal?.indicators?.rsi||'—'}</div>
+            <div style="color:var(--muted)">MACD</div><div>${state.signal?.indicators?.macd_trend||'—'}</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Quick Questions</span></div>
+          <div class="card-body" style="padding:8px;display:flex;flex-direction:column;gap:4px">
+            ${['What does RSI mean?','Explain MACD to me','How do I read candlesticks?','What is VWAP?','How do whales affect prices?','What is a stop-loss?','Explain position sizing','What is risk/reward ratio?'].map(q =>
+              `<button class="btn btn-ghost btn-sm" style="text-align:left;font-size:11px;padding:5px 8px" data-question="${q}">${q}</button>`
+            ).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderLearnPage() {
+  const lessons = [
+    { id:'1', title:'Understanding Candlestick Charts', level:'Beginner', duration:'5 min', topics:['What is a candlestick?','Reading OHLC','Bullish vs bearish'], prompt:'Explain candlestick charts to a complete beginner. What does each part of the candle mean?' },
+    { id:'2', title:'RSI — The Momentum Meter', level:'Beginner', duration:'7 min', topics:['What RSI measures','Oversold vs overbought','Using RSI in trades'], prompt:'Teach me everything about RSI — what it is, how to read it, and how to use it.' },
+    { id:'3', title:'MACD Crossovers Explained', level:'Intermediate', duration:'8 min', topics:['MACD components','Bullish crossover','Divergence patterns'], prompt:'Explain MACD in detail — all components, crossovers, and what divergence means.' },
+    { id:'4', title:'Whale Hunting 101', level:'Intermediate', duration:'10 min', topics:['Who are institutions?','Volume analysis','Dark pool activity'], prompt:'Teach me how to track whale and institutional activity. What volume patterns matter?' },
+    { id:'5', title:'Risk Management Masterclass', level:'Essential', duration:'12 min', topics:['The 2% rule','Stop-loss placement','Position sizing'], prompt:'Give me a complete masterclass on risk management — the 2% rule, stop losses, and position sizing.' },
+    { id:'6', title:'Reading Market Structure', level:'Advanced', duration:'15 min', topics:['Support & resistance','Trend identification','Breakout patterns'], prompt:'Explain market structure — support, resistance, trends, and breakout patterns.' },
+    { id:'7', title:'Bollinger Bands Deep Dive', level:'Intermediate', duration:'9 min', topics:['What Bollinger Bands show','Squeeze patterns','Band breakouts'], prompt:'Teach me Bollinger Bands in depth — how they work, squeeze patterns, and how to trade breakouts.' },
+    { id:'8', title:'VWAP Trading Strategies', level:'Advanced', duration:'11 min', topics:['What VWAP is','Institutional use','Entry strategies'], prompt:'Explain VWAP trading — what it is, why institutions use it, and how to use it for entries.' },
+  ];
+  return `
+  <div style="max-width:1100px">
+    <div style="margin-bottom:24px">
+      <div style="font-size:20px;font-weight:800;color:white;margin-bottom:6px">📚 Trading Academy</div>
+      <div style="font-size:13px;color:var(--muted)">Learn to trade like a professional — click any lesson to start with your AI mentor</div>
+    </div>
+    <div class="lesson-grid">
+      ${lessons.map(l => `
+        <div class="lesson-card" data-question="${l.prompt}" data-goto-mentor="1">
+          <div class="lesson-level ${l.level}">${l.level} · ${l.duration}</div>
+          <div class="lesson-title">${l.title}</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.6">Click to start this lesson with the AI mentor</div>
+          <div class="lesson-topics">
+            ${l.topics.map(t => `<span class="lesson-topic">${t}</span>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:24px;padding:16px;background:var(--bg1);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;gap:16px">
+      <div style="font-size:32px">🎯</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:white;margin-bottom:4px">Practice in the Arena</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">After each lesson, practice what you learned in the Arena with $100,000 paper money. The more you practice, the higher your skill rating climbs.</div>
+      </div>
+      <button class="btn btn-primary" style="flex-shrink:0;white-space:nowrap" data-page="arena">Go to Arena →</button>
+    </div>
+  </div>`;
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function renderModal() {
+  const t = state.pendingTrade;
+  if (!t) return '';
+  const cost = t.qty * t.price;
+  return `
+  <div class="modal-overlay" id="tradeModalOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Confirm Paper ${t.side.toUpperCase()}</div>
+      <div class="modal-body">
+        Symbol:&nbsp;&nbsp;&nbsp;<b>${t.symbol}</b><br>
+        Action:&nbsp;&nbsp;&nbsp;<b style="color:${t.side==='buy'?'var(--green)':'var(--red)'}">${t.side.toUpperCase()}</b><br>
+        Quantity:&nbsp;<b>${t.qty} shares</b><br>
+        Price:&nbsp;&nbsp;&nbsp;&nbsp;<b>$${t.price.toFixed(2)}</b><br>
+        Total:&nbsp;&nbsp;&nbsp;&nbsp;<b>$${cost.toFixed(2)}</b>
+        ${t.side==='buy'&&state.signal?.stop_loss?`<br>Stop Loss: <b style="color:var(--red)">$${state.signal.stop_loss}</b>`:''}
+        ${t.side==='buy'&&state.signal?.take_profit?`<br>Take Profit: <b style="color:var(--green)">$${state.signal.take_profit}</b>`:''}
+      </div>
+      <div style="font-size:11px;color:var(--amber);margin-bottom:14px">⚠️ Paper trade — simulated only, no real money</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" style="flex:1" id="modalCancelBtn">Cancel</button>
+        <button class="btn ${t.side==='buy'?'btn-green':'btn-red'}" style="flex:1" id="modalConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Bind events ────────────────────────────────────────────────────────────
+function bindEvents() {
+  // Navigation
+  document.querySelectorAll('[data-page]').forEach(el => {
+    el.addEventListener('click', () => { state.page = el.dataset.page; render(); afterRender(); });
+  });
+
+  // Nav items
+  document.querySelectorAll('.nav-item[data-page]').forEach(el => {
+    el.addEventListener('click', () => { state.page = el.dataset.page; render(); afterRender(); });
+  });
+
+  // Logout
+  document.getElementById('logoutBtn')?.addEventListener('click', () => {
+    localStorage.clear();
+    state.user = null; state.token = '';
+    render();
+  });
+
+  // Analyze
+  document.getElementById('analyzeBtn')?.addEventListener('click', () => {
+    const sym = document.getElementById('symbolInput')?.value.toUpperCase().trim();
+    if (sym) { state.symbol = sym; analyzeSymbol(sym); }
+  });
+  document.getElementById('symbolInput')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('analyzeBtn')?.click();
+  });
+
+  // Watchlist click
+  document.querySelectorAll('.wl-item[data-sym]').forEach(el => {
+    el.addEventListener('click', () => { state.symbol = el.dataset.sym; analyzeSymbol(el.dataset.sym); });
+  });
+
+  // Watchlist add
+  document.getElementById('wlAddInput')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const sym = e.target.value.toUpperCase().trim();
+      if (sym && !state.watchlist.includes(sym)) {
+        state.watchlist.push(sym);
+        e.target.value = '';
+        render(); afterRender();
+        analyzeSymbol(sym);
+      }
+    }
+  });
+
+  // Quick questions from mentor panel
+  document.querySelectorAll('[data-question]').forEach(el => {
+    el.addEventListener('click', () => {
+      const q = el.dataset.question;
+      if (el.dataset.gotoMentor) {
+        state.page = 'mentor';
+        render();
+        afterRender();
+        setTimeout(() => sendMentorMessage(q), 100);
+      } else {
+        state.page = 'mentor';
+        render();
+        afterRender();
+        setTimeout(() => sendMentorMessage(q), 100);
+      }
+    });
+  });
+
+  // Paper trade buttons
+  document.getElementById('paperBuyBtn')?.addEventListener('click',  () => initPaperTrade('buy'));
+  document.getElementById('paperSellBtn')?.addEventListener('click', () => initPaperTrade('sell'));
+  document.getElementById('arenaBuyBtn')?.addEventListener('click',  () => {
+    const sym = document.getElementById('arenaSymbol')?.value.toUpperCase() || state.symbol;
+    const qty = parseInt(document.getElementById('arenaQty')?.value) || 1;
+    state.symbol = sym;
+    initPaperTrade('buy', sym, qty);
+  });
+  document.getElementById('arenaSellBtn')?.addEventListener('click', () => {
+    const sym = document.getElementById('arenaSymbol')?.value.toUpperCase() || state.symbol;
+    const qty = parseInt(document.getElementById('arenaQty')?.value) || 1;
+    state.symbol = sym;
+    initPaperTrade('sell', sym, qty);
+  });
+
+  // Whale cells
+  document.querySelectorAll('.whale-cell[data-sym]').forEach(el => {
+    el.addEventListener('click', () => { state.symbol = el.dataset.sym; state.page = 'chart'; analyzeSymbol(el.dataset.sym); });
+  });
+
+  // Modal
+  document.getElementById('modalCancelBtn')?.addEventListener('click',  () => { state.pendingTrade = null; render(); afterRender(); });
+  document.getElementById('modalConfirmBtn')?.addEventListener('click', () => executePaperTrade());
+
+  // Chat
+  document.getElementById('chatSendBtn')?.addEventListener('click', () => {
+    const input = document.getElementById('chatInput');
+    if (input?.value.trim()) { sendMentorMessage(input.value.trim()); input.value = ''; }
+  });
+  document.getElementById('chatInput')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      document.getElementById('chatSendBtn')?.click();
+    }
+  });
+}
+
+// ── After render (chart, scroll) ───────────────────────────────────────────
+function afterRender() {
+  drawChart();
+  scrollChatToBottom();
+  if (state.page === 'whale' && !state.whaleFlow.length) loadWhaleFlow();
+  if (state.page === 'arena') loadCompetition();
+}
+
+// ── Canvas Chart ───────────────────────────────────────────────────────────
+function drawChart() {
+  const wrap = document.getElementById('chartWrap');
+  const canvas = document.getElementById('mainChart');
+  if (!canvas || !wrap) return;
+
+  canvas.width  = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  const ctx = canvas.getContext('2d');
+  const bars = state.bars;
+
+  ctx.fillStyle = '#060b14';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  if (!bars.length) {
+    ctx.fillStyle = '#4a6890';
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Analyzing chart data…', canvas.width/2, canvas.height/2);
+    return;
+  }
+
+  const W = canvas.width, H = canvas.height;
+  const priceH = H * 0.78;
+  const volTop = H * 0.83;
+  const volH   = H * 0.14;
+  const padL = 8, padR = 65;
+  const chartW = W - padL - padR;
+
+  const vis   = bars.slice(-120);
+  const barW  = chartW / vis.length;
+  const candW = Math.max(1, barW * 0.65);
+
+  const maxP = Math.max(...vis.map(b=>b.h)) * 1.002;
+  const minP = Math.min(...vis.map(b=>b.l)) * 0.998;
+  const rng  = maxP - minP || 1;
+  const toY  = p => priceH - ((p-minP)/rng)*priceH*0.9 - priceH*0.05;
+  const maxV = Math.max(...vis.map(b=>b.v)) || 1;
+
+  // Grid
+  ctx.strokeStyle = '#0d1828'; ctx.lineWidth = 1;
+  for (let i=0;i<=5;i++) {
+    const y = (priceH/5)*i;
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+    const price = maxP - (rng*i/5);
+    ctx.fillStyle = '#4a6890'; ctx.font = '9px monospace'; ctx.textAlign = 'left';
+    ctx.fillText('$'+price.toFixed(2), W-padR+4, y+3);
+  }
+
+  // Volume
+  vis.forEach((b,i) => {
+    const x  = padL + i*barW + (barW-candW)/2;
+    const vh = (b.v/maxV)*volH;
+    ctx.fillStyle = b.c>=b.o ? '#00e67620' : '#ff335520';
+    ctx.fillRect(x, volTop+volH-vh, candW, vh);
+  });
+
+  // Candles
+  vis.forEach((b,i) => {
+    const x    = padL + i*barW + barW/2;
+    const xL   = padL + i*barW + (barW-candW)/2;
+    const bull = b.c >= b.o;
+    ctx.strokeStyle = bull ? '#00c853' : '#c62828';
+    ctx.lineWidth   = 1;
+    ctx.beginPath(); ctx.moveTo(x,toY(b.h)); ctx.lineTo(x,toY(b.l)); ctx.stroke();
+    ctx.fillStyle = bull ? '#00e676' : '#ff3355';
+    const bTop = Math.min(toY(b.o),toY(b.c));
+    const bH   = Math.max(1, Math.abs(toY(b.c)-toY(b.o)));
+    ctx.fillRect(xL, bTop, candW, bH);
+  });
+
+  // EMA lines
+  if (state.signal?.indicators) {
+    const inds = state.signal.indicators;
+    [['ema9','#ff9800'],['ema21','#2979ff'],['ema50','#d040fb']].forEach(([k,col]) => {
+      const v = inds[k];
+      if (!v) return;
+      const y = toY(v);
+      ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = col; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+      ctx.fillText(k.toUpperCase(), W-padR-4, y-2);
+    });
+  }
+}
+
+// ── WebSocket ──────────────────────────────────────────────────────────────
+let ws;
+function connectWS() {
+  try {
+    ws = new WebSocket(WS_URL);
+    ws.onopen  = () => { state.connected=true; updateStatus(); };
+    ws.onclose = () => { state.connected=false; updateStatus(); setTimeout(connectWS,3000); };
+    ws.onerror = () => { state.connected=false; };
+    ws.onmessage = e => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type==='signal'&&msg.symbol===state.symbol) { state.signal=msg.signal; state.whale=msg.whale; reRenderSignal(); }
+        if (msg.type==='scan_update') updateWLItem(msg.symbol, msg.signal, msg.quote);
+      } catch {}
+    };
+  } catch { state.connected=false; setTimeout(connectWS,3000); }
+}
+
+function updateStatus() {
+  const dot  = document.querySelector('.live-dot');
+  const text = document.querySelector('.status-live span');
+  if (dot)  { dot.className = 'live-dot' + (state.connected?' on':''); }
+  if (text) { text.textContent = state.connected?'LIVE':'OFFLINE'; text.style.color = state.connected?'var(--green)':'var(--red)'; }
+}
+
+// ── API calls ──────────────────────────────────────────────────────────────
+async function analyzeSymbol(symbol) {
+  document.querySelector('.sig-action') && (document.querySelector('.sig-action').textContent = 'ANALYZING…');
+  try {
+    const [sigR, barsR] = await Promise.all([
+      fetch(API+'/api/signals/analyze/'+symbol, {method:'POST'}),
+      fetch(API+'/api/market/bars/'+symbol+'?count=150'),
+    ]);
+    if (sigR.ok) {
+      const d = await sigR.json();
+      state.signal = d.signal; state.whale = d.whale;
+      updateWLItem(symbol, d.signal, d.quote);
+    }
+    if (barsR.ok) {
+      const b = await barsR.json();
+      state.bars = b.bars || [];
+    }
+    state.connected = true;
+    render(); afterRender();
+  } catch(e) {
+    // offline — generate mock bars
+    state.bars = generateMockBars();
+    state.connected = false;
+    render(); afterRender();
+  }
+}
+
+async function loadDashboard() {
+  await analyzeSymbol(state.symbol);
+  loadWhaleFlow();
+  loadCompetition();
+  // Scan watchlist in background
+  for (const sym of state.watchlist) {
+    try {
+      const r = await fetch(API+'/api/signals/analyze/'+sym, {method:'POST'});
+      if (r.ok) { const d = await r.json(); updateWLItem(sym, d.signal, d.quote); }
+    } catch {}
+  }
+}
+
+async function loadWhaleFlow() {
+  try {
+    const r = await fetch(API+'/api/whale/flow');
+    if (r.ok) { const d = await r.json(); state.whaleFlow = d.flow||[]; reRenderWhale(); }
+  } catch {
+    // Generate mock whale data
+    state.whaleFlow = ['AAPL','TSLA','NVDA','AMD','META','GOOGL','MSFT','SPY','QQQ','AMZN'].map(sym => ({
+      symbol: sym,
+      price: Math.random()*400+50,
+      change_pct: (Math.random()-0.5)*6,
+      whale: { is_whale: Math.random()>0.7, vol_ratio: Math.random()*4+0.5,
+               dollar_volume: Math.random()*500000000, pressure: Math.random()>0.5?'BUY':'SELL', intensity:'MEDIUM' }
+    }));
+  }
+}
+
+async function loadCompetition() {
+  try {
+    const r = await fetch(API+'/api/arena/competition');
+    if (r.ok) { const d = await r.json(); state.competition=d.competition; state.leaderboard=d.leaderboard||[]; }
+  } catch { state.leaderboard = generateMockLeaderboard(); }
+}
+
+function generateMockLeaderboard() {
+  return [
+    {username:'whale_king',  total_return:34.2, portfolio_value:134200},
+    {username:'AITrader',    total_return:28.7, portfolio_value:128700},
+    {username:'moonjuice',   total_return:21.3, portfolio_value:121300},
+    {username:'rocketkat',   total_return:18.9, portfolio_value:118900},
+    {username:state.user?.username||'you', total_return:12.4, portfolio_value:112400, user_id:state.user?.id},
+  ];
+}
+
+// ── Paper trading ──────────────────────────────────────────────────────────
+function initPaperTrade(side, sym, qty) {
+  const symbol = sym || state.symbol;
+  const price  = state.wlData[symbol]?.quote?.price || state.signal?.entry_price || 100;
+  const qty2   = qty || parseInt(document.getElementById('tradeQty')?.value) || 1;
+  state.pendingTrade = { side, symbol, qty: qty2, price };
+  render(); afterRender();
+}
+
+function executePaperTrade() {
+  const t = state.pendingTrade;
+  if (!t) return;
+  const p = state.portfolio;
+  const cost = t.qty * t.price;
+
+  if (t.side === 'buy') {
+    if (cost > p.cash) { showToast('❌ Insufficient paper cash'); state.pendingTrade=null; render(); afterRender(); return; }
+    p.cash -= cost;
+    const sym = t.symbol;
+    if (p.positions[sym]) {
+      const pos = p.positions[sym];
+      const tot = pos.qty + t.qty;
+      pos.avg_cost = (pos.qty*pos.avg_cost + cost) / tot;
+      pos.qty = tot;
+    } else {
+      p.positions[sym] = { qty: t.qty, avg_cost: t.price };
+    }
+  } else {
+    const pos = p.positions[t.symbol];
+    if (!pos || pos.qty < t.qty) { showToast('❌ Not enough shares'); state.pendingTrade=null; render(); afterRender(); return; }
+    p.cash += cost;
+    pos.qty -= t.qty;
+    if (pos.qty <= 0) delete p.positions[t.symbol];
+  }
+
+  p.trades.push({ side:t.side, symbol:t.symbol, qty:t.qty, price:t.price, ts:new Date().toISOString() });
+  showToast(`✅ Paper ${t.side.toUpperCase()} ${t.qty}×${t.symbol} @ $${t.price.toFixed(2)}`);
+  state.pendingTrade = null;
+
+  // Try server
+  fetch(API+'/api/arena/trade', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({user_id:state.user?.id||'demo', symbol:t.symbol, side:t.side, qty:t.qty, price:t.price, confirmed:true})
+  }).catch(()=>{});
+
+  render(); afterRender();
+}
+
+// ── Mentor chat ────────────────────────────────────────────────────────────
+async function sendMentorMessage(message) {
+  state.chatMessages.push({ role:'user', content: message });
+  render(); afterRender();
+  scrollChatToBottom();
+
+  try {
+    const r = await fetch(API+'/api/mentor/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        message,
+        context: state.signal ? {
+          symbol: state.symbol,
+          signal: state.signal.action,
+          rsi: state.signal.indicators?.rsi,
+          macd_trend: state.signal.indicators?.macd_trend,
+          vol_spike: state.signal.indicators?.vol_spike,
+          is_whale: state.whale?.is_whale,
+        } : null
+      })
+    });
+    if (r.ok) {
+      const d = await r.json();
+      state.chatMessages.push({ role:'ai', content: d.reply });
+    } else {
+      state.chatMessages.push({ role:'ai', content: getMockMentorReply(message) });
+    }
+  } catch {
+    state.chatMessages.push({ role:'ai', content: getMockMentorReply(message) });
+  }
+
+  render(); afterRender();
+  scrollChatToBottom();
+}
+
+function getMockMentorReply(q) {
+  q = q.toLowerCase();
+  if (q.includes('rsi')) return 'RSI (Relative Strength Index) measures momentum on a 0-100 scale.\n\n• Below 30 = oversold (potential bounce opportunity)\n• Above 70 = overbought (potential pullback risk)\n• Around 50 = neutral\n\nThink of it like a rubber band — the more stretched, the more likely it snaps back!\n\n⚠️ Practice with paper trading first.';
+  if (q.includes('macd')) return 'MACD compares two moving averages to show momentum direction.\n\nThe three parts:\n1. MACD Line (12-day EMA minus 26-day EMA)\n2. Signal Line (9-day average of MACD)\n3. Histogram (gap between them)\n\nBullish crossover = MACD crosses ABOVE signal line 📈\nBearish crossover = MACD crosses BELOW signal line 📉\n\n⚠️ Practice with paper trading first.';
+  if (q.includes('stop') || q.includes('loss')) return 'Stop-losses are your most important protection!\n\n🛡️ The 2% Rule: Never risk more than 2% of your account on one trade\n\nExample with $10,000:\n• Max risk = $200\n• If stop is $5 away from entry\n• You can buy 40 shares maximum\n\nAlways set your stop BEFORE entering the trade. Never move it further down.\n\n⚠️ Practice with paper trading first.';
+  if (q.includes('whale')) return '🐳 Whales are institutional investors — hedge funds, banks, pension funds — trading millions at once.\n\nHow to spot them:\n• Volume 2x+ above average = unusual activity\n• Volume 5x+ = major institutional movement\n• Large dollar flow = real money moving\n\nWhy it matters: Whales do deep research. When smart money moves, it often precedes a price trend.\n\nAlphaIQ tracks this in real-time on the Whale Flow page!\n\n⚠️ Never trade on whale data alone.';
+  return "Great question! I'm your AI trading mentor — I'm here to help you understand the market.\n\nTry asking me about specific topics like:\n• RSI, MACD, or other indicators\n• How to read candlestick patterns\n• Risk management and stop-losses\n• Whale tracking and institutional flow\n• How to practice effectively in the Arena\n\n⚠️ Remember: Always practice with paper trading before risking real money.";
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function updateWLItem(symbol, signal, quote) {
+  state.wlData[symbol] = { signal, quote };
+  const wlEl = document.querySelector(`.wl-item[data-sym="${symbol}"]`);
+  if (!wlEl) return;
+  const pct = quote?.change_pct || 0;
+  const sig = signal?.action || '—';
+  wlEl.innerHTML = `
+    <span class="wl-sym">${symbol}</span>
+    <span style="font-family:var(--mono);font-size:12px;flex:1">$${(quote?.price||0).toFixed(2)}</span>
+    <span style="font-family:var(--mono);font-size:11px;width:60px;text-align:right;color:${pct>=0?'var(--green)':'var(--red)'}">${pct>=0?'+':''}${pct.toFixed(2)}%</span>
+    <span style="font-size:10px;width:80px;text-align:right;color:${sig.includes('BUY')?'var(--green)':sig.includes('SELL')?'var(--red)':'var(--muted)'}">${sig}</span>`;
+  wlEl.onclick = () => { state.symbol = symbol; analyzeSymbol(symbol); };
+}
+
+function reRenderSignal() {
+  const strip = document.querySelector('.signal-strip');
+  if (strip) strip.outerHTML = renderSignalStrip();
+  drawChart();
+}
+
+function reRenderWhale() {
+  // Only re-render if on whale page
+  if (state.page === 'dashboard') { render(); afterRender(); }
+}
+
+function scrollChatToBottom() {
+  const el = document.getElementById('chatMessages');
+  if (el) el.scrollTop = el.scrollHeight;
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function fmtBig(v) {
+  if (v>=1e9) return '$'+(v/1e9).toFixed(1)+'B';
+  if (v>=1e6) return '$'+(v/1e6).toFixed(0)+'M';
+  if (v>=1e3) return '$'+(v/1e3).toFixed(0)+'K';
+  return '$'+Math.round(v);
+}
+
+function getTimeOfDay() {
+  const h = new Date().getHours();
+  return h<12?'morning':h<17?'afternoon':'evening';
+}
+
+function getMarketStatus() {
+  const now = new Date();
+  const h = now.getHours(), day = now.getDay();
+  const isWeekday = day>=1&&day<=5;
+  const isMarketHours = h>=9&&h<16;
+  return isWeekday&&isMarketHours ? '<span style="color:var(--green)">OPEN 🟢</span>' : '<span style="color:var(--red)">CLOSED 🔴</span>';
+}
+
+function generateMockBars(count=150) {
+  const bars=[], now=Date.now()/1000;
+  let price=190;
+  for(let i=0;i<count;i++){
+    const chg=Math.random()*0.02-0.01;
+    const o=price, c=+(o*(1+chg)).toFixed(2);
+    bars.push({t:Math.floor(now-(count-i)*60), o, h:+(Math.max(o,c)*1.003).toFixed(2), l:+(Math.min(o,c)*0.997).toFixed(2), c, v:Math.floor(Math.random()*2000000+200000)});
+    price=c;
+  }
+  return bars;
+}
+
+// ── Start ──────────────────────────────────────────────────────────────────
+render();
+if (state.user) {
+  connectWS();
+  loadDashboard();
+}
+</script>
+</body>
+</html>
