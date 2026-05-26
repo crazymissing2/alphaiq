@@ -25,28 +25,28 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s — %(
 log = logging.getLogger("alphaiq")
 
 # ── Globals ───────────────────────────────────────────────────────────────────
-db:       Optional[Database]          = None
-auth_svc: Optional[AuthService]       = None
-market:   Optional[MarketDataService] = None
-ai:       Optional[AISignalEngine]    = None
-whale_svc:Optional[WhaleTracker]      = None
+db:         Optional[Database]          = None
+auth_svc:   Optional[AuthService]       = None
+market_svc: Optional[MarketDataService] = None
+ai:         Optional[AISignalEngine]    = None
+whale_svc:  Optional[WhaleTracker]      = None
 ws_rooms: Dict[str, Set[WebSocket]]   = {}   # room → set of sockets
 scan_task: Optional[asyncio.Task]     = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db, auth_svc, market, ai, whale_svc
+    global db, auth_svc, market_svc, ai, whale_svc
     log.info("🚀 AlphaIQ starting up...")
-    db        = Database()
+    db         = Database()
     await db.init()
-    auth_svc  = AuthService(db)
-    market    = MarketDataService()
-    ai        = AISignalEngine()
-    whale_svc = WhaleTracker()
+    auth_svc   = AuthService(db)
+    market_svc = MarketDataService()
+    ai         = AISignalEngine()
+    whale_svc  = WhaleTracker()
     # Share with routers via app.state
     app.state.db        = db
     app.state.auth      = auth_svc
-    app.state.market    = market
+    app.state.market    = market_svc
     app.state.ai        = ai
     app.state.whale     = whale_svc
     app.state.ws_rooms  = ws_rooms
@@ -114,7 +114,7 @@ async def login(req: LoginRequest):
 @app.post("/api/auth/connect-alpaca")
 async def connect_alpaca(req: AlpacaConnectRequest, user=Depends(auth_svc.get_current_user if auth_svc else None)):
     # Validate Alpaca keys
-    result = await market.validate_alpaca_keys(req.api_key, req.secret_key, req.paper_mode)
+    result = await market_svc.validate_alpaca_keys(req.api_key, req.secret_key, req.paper_mode)
     if not result["valid"]:
         raise HTTPException(status_code=400, detail=f"Invalid Alpaca keys: {result['error']}")
     # Store encrypted in DB
